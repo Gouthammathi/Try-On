@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as poseDetection from "@tensorflow-models/pose-detection";
-import { drawStickman } from "./stickmanutils";
+import { drawStickman } from "./stickmanUtils";
 
 export default function PoseCanvas() {
   const videoRef = useRef(null);
