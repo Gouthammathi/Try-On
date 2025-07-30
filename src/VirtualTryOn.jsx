@@ -5,13 +5,17 @@ import { drawStickman } from "./stickmanUtils";
 import { 
   calculateTshirtKeypoints, 
   drawTshirtKeypoints, 
-  overlayTshirt, 
+  overlayTshirtSimple,
+  overlayTshirtSegmented,
+  overlayTshirtFixed,
   overlayTshirtAdvanced,
+  overlayTshirtUltraPrecise,
   loadTshirtImage,
   validateKeypointMatch,
   createSampleTshirtImage,
   drawKeypointComparison
 } from "./tshirtOverlay";
+import AdvancedImageProcessor from "./AdvancedImageProcessor";
 
 export default function VirtualTryOn() {
   const videoRef = useRef(null);
@@ -22,6 +26,7 @@ export default function VirtualTryOn() {
   const [showKeypoints, setShowKeypoints] = useState(true);
   const [showTshirtOverlay, setShowTshirtOverlay] = useState(true);
   const [showKeypointComparison, setShowKeypointComparison] = useState(false);
+  const [overlayMode, setOverlayMode] = useState('simple'); // 'simple', 'fixed', 'segmented', 'advanced', 'ultra-precise'
 
   // Load default t-shirt image
   useEffect(() => {
@@ -38,21 +43,9 @@ export default function VirtualTryOn() {
     loadDefaultTshirt();
   }, []);
 
-  // Handle t-shirt image upload
-  const handleTshirtUpload = async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setIsLoading(true);
-      try {
-        const imageUrl = URL.createObjectURL(file);
-        const img = await loadTshirtImage(imageUrl);
-        setTshirtImage(img);
-      } catch (error) {
-        console.error('Error loading t-shirt image:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
+  // Handle processed image from ImageProcessor
+  const handleProcessedImage = (processedImg) => {
+    setTshirtImage(processedImg);
   };
 
   useEffect(() => {
@@ -111,7 +104,24 @@ export default function VirtualTryOn() {
             
             // Overlay t-shirt if enabled and image is loaded
             if (showTshirtOverlay && tshirtImage) {
-              overlayTshirtAdvanced(ctx, tshirtImage, bodyKeypoints);
+              switch (overlayMode) {
+                case 'simple':
+                  overlayTshirtSimple(ctx, tshirtImage, bodyKeypoints);
+                  break;
+                case 'fixed':
+                  overlayTshirtFixed(ctx, tshirtImage, bodyKeypoints);
+                  break;
+                case 'segmented':
+                  overlayTshirtSegmented(ctx, tshirtImage, bodyKeypoints);
+                  break;
+                case 'advanced':
+                  overlayTshirtAdvanced(ctx, tshirtImage, bodyKeypoints);
+                  break;
+                case 'ultra-precise':
+                default:
+                  overlayTshirtUltraPrecise(ctx, tshirtImage, bodyKeypoints);
+                  break;
+              }
             }
             
             // Draw match score
@@ -142,58 +152,62 @@ export default function VirtualTryOn() {
           Virtual Try-On System
         </h1>
         
+        {/* Image Processing */}
+        <AdvancedImageProcessor onProcessedImage={handleProcessedImage} />
+        
         {/* Controls */}
         <div className="bg-gray-800 p-4 rounded-lg mb-4">
           <div className="flex flex-wrap gap-4 items-center">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Upload T-Shirt Image:
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleTshirtUpload}
-                className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-              />
-            </div>
-            
-            <div className="flex gap-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={showKeypoints}
-                  onChange={(e) => setShowKeypoints(e.target.checked)}
-                  className="mr-2"
-                />
-                Show Keypoints
-              </label>
-              
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={showKeypointComparison}
-                  onChange={(e) => setShowKeypointComparison(e.target.checked)}
-                  className="mr-2"
-                />
-                Show Keypoint Comparison
-              </label>
-              
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={showTshirtOverlay}
-                  onChange={(e) => setShowTshirtOverlay(e.target.checked)}
-                  className="mr-2"
-                />
-                Show T-Shirt Overlay
-              </label>
-            </div>
-            
-            {isLoading && (
-              <div className="text-blue-400">
-                Loading t-shirt image...
+            <div className="flex flex-wrap gap-4 items-center">
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={showKeypoints}
+                    onChange={(e) => setShowKeypoints(e.target.checked)}
+                    className="mr-2"
+                  />
+                  Show Keypoints
+                </label>
+                
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={showKeypointComparison}
+                    onChange={(e) => setShowKeypointComparison(e.target.checked)}
+                    className="mr-2"
+                  />
+                  Show Keypoint Comparison
+                </label>
+                
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={showTshirtOverlay}
+                    onChange={(e) => setShowTshirtOverlay(e.target.checked)}
+                    className="mr-2"
+                  />
+                  Show T-Shirt Overlay
+                </label>
               </div>
-            )}
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Overlay Mode:
+                </label>
+                <select
+                  value={overlayMode}
+                  onChange={(e) => setOverlayMode(e.target.value)}
+                  className="bg-gray-700 text-white px-3 py-1 rounded text-sm"
+                >
+                  <option value="simple">Simple Alignment</option>
+                  <option value="fixed">Fixed Alignment</option>
+                  <option value="segmented">Segmented Alignment</option>
+                  <option value="advanced">Advanced Alignment</option>
+                  <option value="ultra-precise">Ultra-Precise Alignment</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -202,10 +216,11 @@ export default function VirtualTryOn() {
           <h2 className="text-lg font-semibold mb-2">How it works:</h2>
           <ul className="list-disc list-inside space-y-1 text-sm">
             <li>Body keypoints are detected using TensorFlow.js MoveNet model</li>
-            <li>T-shirt keypoints are calculated based on body keypoints</li>
-            <li>Keypoints are matched between body and t-shirt</li>
-            <li>T-shirt is overlaid on your body with real-time tracking</li>
-            <li>Match score shows how well the keypoints align</li>
+            <li>T-shirt is segmented into body, sleeves, and neck areas</li>
+            <li>Each segment aligns precisely with corresponding body parts</li>
+            <li>Sleeves follow arm movements, body follows torso, neck aligns with actual neck</li>
+            <li>Real-time tracking with individual part transformations</li>
+            <li>Choose overlay mode: Segmented, Advanced, or Ultra-Precise alignment</li>
           </ul>
         </div>
         
